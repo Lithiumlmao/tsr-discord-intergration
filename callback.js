@@ -40,7 +40,7 @@ app.post('/callback', (req, res) => {
 
   // Verify callback signature
   const calculatedSign = crypto
-    .createHash('sha256') // Use SHA-256 instead of MD5 for security
+    .createHash('md5') // Use SHA-256 instead of MD5 for security
     .update(PARTNER_KEY + req.body.code + req.body.serial)
     .digest('hex');
 
