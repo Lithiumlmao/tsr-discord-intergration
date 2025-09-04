@@ -42,7 +42,7 @@ async def on_ready():
     value="Mệnh giá thẻ (Ví dụ: 10000, 20000,...)"
 )
 async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vinaphone'], mathe: str, seri: str, value: Literal['10000', '20000', '30000', '50000', '100000', '200000', '300000', '500000']):
-    #await interaction.response.defer()
+    await interaction.response.defer(ephemeral=True)
     
     sign = str(hashlib.sha256((key + mathe + seri).encode()).hexdigest())
     
@@ -63,8 +63,8 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
         response = requests.post(api, data=data)
         result = response.json()
         if result["status"] == 99:
-            #await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM khi hoàn thành.", ephemeral=True)
-            await interaction.response.send_message("Thẻ của bạn đang được xử lý, Bot sẽ gửi DM khi hoàn thành....", ephemeral=True)
+            await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM khi hoàn thành.")
+            #await interaction.response.send_message("Thẻ của bạn đang được xử lý, Bot sẽ gửi DM khi hoàn thành....", ephemeral=True)
             pending_requests[req_id] = {
                 'user_id': interaction.user.id,
                 'telco': data['telco'],
@@ -73,14 +73,14 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
                 'amount': data['amount']
             }
         elif result["status"] == 1:
-            #await interaction.followup.send(f"Nạp thẻ thành công!",ephemeral=True)
-            await interaction.response.send_message("Thẻ của bạn đã được nạp thành công!", ephemeral=True)
+            await interaction.followup.send(f"Nạp thẻ thành công!")
+            #await interaction.response.send_message("Thẻ của bạn đã được nạp thành công!", ephemeral=True)
         else:
-            #await interaction.followup.send(f"Lỗi: {result['message']}",ephemeral=True)
-            await interaction.response.send_message(f"Lỗi: {result['message']}", ephemeral=True)
+            await interaction.followup.send(f"Lỗi: {result['message']}")
+            #await interaction.response.send_message(f"Lỗi: {result['message']}", ephemeral=True)
     except Exception as e:
-        #await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}",ephemeral=True)
-        await interaction.response.send_message(f"Đã có lỗi xảy ra: {str(e)}", ephemeral=True)
+        await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}")
+        #await interaction.response.send_message(f"Đã có lỗi xảy ra: {str(e)}", ephemeral=True)
 
 @tasks.loop(seconds=30)
 async def check_pending():
