@@ -30,6 +30,7 @@ async def on_ready():
     try:
         synced = await slash.sync()
         print(f"Synced {len(synced)} command(s).")
+        check_pending.start()
     except Exception as e:
         print(f"Unable to sync commands: {e}")
 
