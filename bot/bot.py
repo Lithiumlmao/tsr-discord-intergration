@@ -1,6 +1,3 @@
-# Shoutout to Grok AI for the (bad) live status update code
-
-
 import hashlib
 import discord
 from discord import app_commands
@@ -12,7 +9,7 @@ import json
 
 load_dotenv()
 
-token = os.getenv("TOKEN")
+token = os.getenv('TOKEN')
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -21,10 +18,10 @@ slash = app_commands.CommandTree(bot)
 
 api = "https://thesieure.com/chargingws/v2"
 
-id = os.getenv("TSR_PARTNER_ID")
-key = os.getenv("TSR_PARTNER_KEY")
+id = os.getenv('TSR_PARTNER_ID')
+key = os.getenv('TSR_PARTNER_KEY')
 
-pending_requests = {}  # For live status update
+pending_requests = {}
 
 @bot.event
 async def on_ready():
@@ -59,39 +56,36 @@ async def napthe(interaction: discord.Interaction, type: str, mathe: str, seri: 
         "amount": value,
         "request_id": req_id,
         "command": "charging"
-    }
-    
-    try:
-        response = requests.post(api, data=data)
-        result = response.json()
-        
-        if result["status"] == 99:
-            await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM khi hoàn thành.")
-            pending_requests[req_id] = {
+	}
+	try:
+	       response = requests.post(api, data=data)
+	       result = response.json()
+	       if result["status"] == 99:
+	           await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM khi hoàn thành.")
+	           pending_requests[req_id] = {
                 'user_id': interaction.user.id,
                 'telco': data['telco'],
                 'code': data['code'],
                 'serial': data['serial'],
                 'amount': data['amount']
-                }
-
-        elif result["status"] == 1:
-            await interaction.followup.send(f"Nạp thẻ thành công!")
-        else:
-            await interaction.followup.send(f"Lỗi: {result['message']}")
-    except Exception as e:
-        await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}")
+	           }
+	       elif result["status"] == 1:
+	           	await interaction.followup.send(f"Nạp thẻ thành công!")
+	       else:
+	       	await interaction.followup.send(f"Lỗi: {result['message']}")
+	except Exception as e:
+	       await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}")
 
 @tasks.loop(seconds=30)
 async def check_pending():
     for req_id, data in list(pending_requests.items()):
         check_data = {
-        telco = data['telco']
-        code = data['code']
-        serial = data['serial']
-        amount = data['amount']
-        command = 'check'
-        sign = str(hashlib.sha256(key + data['code'] + data['serial']).hexdigest())
+        "telco": data['telco'],
+        "code": data['code'],
+        "serial": data['serial'],
+        "amount": data['amount'],
+        "command": "check",
+        "sign": str(hashlib.sha256(key + data['code'] + data['serial']).hexdigest())
         }
         try:
             r = requests.get(api)
