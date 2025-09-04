@@ -1,0 +1,12 @@
+{
+  "name": "tsr-bot",
+  "version": "0.0.1",
+  "description": "Bot nạp thẻ bằng API của TheSieuRe"
+  "main": "callback.js",
+  "scripts": {
+    "start": "node callback.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
