@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
+import random
 from typing import Literal
 
 load_dotenv()
@@ -44,7 +45,7 @@ async def on_ready():
 async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vinaphone'], mathe: str, seri: str, value: Literal['10000', '20000', '30000', '50000', '100000', '200000', '300000', '500000']):
     await interaction.response.defer(ephemeral=True)
     
-    sign = str(hashlib.sha256((key + mathe + seri).encode()).hexdigest())
+    sign = str(hashlib.md5((key + mathe + seri).encode()).hexdigest())
     
     req_id = int(interaction.user.id + interaction.created_at.timestamp())
     
@@ -91,7 +92,7 @@ async def check_pending():
             "serial": data['serial'],
             "amount": data['amount'],
             "command": "check",
-            "sign": str(hashlib.sha256((key + data['code'] + data['serial']).encode()).hexdigest())
+            "sign": str(hashlib.md5((key + data['code'] + data['serial']).encode()).hexdigest())
         }
         try:
             r = requests.get(api, data=check_data)
