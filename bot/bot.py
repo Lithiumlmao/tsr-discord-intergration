@@ -42,7 +42,7 @@ async def on_ready():
 async def napthe(interaction: discord.Interaction, type: str, mathe: str, seri: str, value: int):
 	await interaction.response.defer()
 	
-	sign = str(hashlib.sha256(key + mathe + seri).hexdigest())
+	sign = str(hashlib.sha256((key + mathe + seri).encode()).hexdigest())
 	
 	req_id = int(interaction.user.id + interaction.created_at.timestamp())
 	
@@ -85,7 +85,7 @@ async def check_pending():
         "serial": data['serial'],
         "amount": data['amount'],
         "command": "check",
-        "sign": str(hashlib.sha256(key + data['code'] + data['serial']).hexdigest())
+        "sign": str(hashlib.sha256((key + data['code'] + data['serial']).encode()).hexdigest())
         }
         try:
             r = requests.get(api)
