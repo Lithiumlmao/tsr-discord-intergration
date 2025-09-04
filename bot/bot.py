@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import requests
 import json
+from typing import Literal
 
 load_dotenv()
 
@@ -39,15 +40,15 @@ async def on_ready():
     seri="Số serial thẻ",
     value="Mệnh giá thẻ (Ví dụ: 10000, 20000,...)"
 )
-async def napthe(interaction: discord.Interaction, type: str, mathe: str, seri: str, value: int):
-	await interaction.response.defer()
-	
-	sign = str(hashlib.sha256((key + mathe + seri).encode()).hexdigest())
-	
-	req_id = int(interaction.user.id + interaction.created_at.timestamp())
-	
-	data = {
-		"sign": sign,
+async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vinaphone'], mathe: str, seri: str, value: Literal['10000', '20000', '30000', '50000', '100000', '200000', '300000', '500000']):
+    await interaction.response.defer()
+    
+    sign = str(hashlib.sha256((key + mathe + seri).encode()).hexdigest())
+    
+    req_id = int(interaction.user.id + interaction.created_at.timestamp())
+    
+    data = {
+        "sign": sign,
         "partner_id": id,
         "partner_key": key,
         "telco": type.upper(),
@@ -56,39 +57,39 @@ async def napthe(interaction: discord.Interaction, type: str, mathe: str, seri: 
         "amount": value,
         "request_id": req_id,
         "command": "charging"
-	}
-	try:
-	       response = requests.post(api, data=data)
-	       result = response.json()
-	       if result["status"] == 99:
-	           await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM khi hoàn thành.")
-	           pending_requests[req_id] = {
+    }
+    try:
+        response = requests.post(api, data=data)
+        result = response.json()
+        if result["status"] == 99:
+            await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM khi hoàn thành.", ephemeral=True)
+            pending_requests[req_id] = {
                 'user_id': interaction.user.id,
                 'telco': data['telco'],
                 'code': data['code'],
                 'serial': data['serial'],
                 'amount': data['amount']
-	           }
-	       elif result["status"] == 1:
-	           	await interaction.followup.send(f"Nạp thẻ thành công!")
-	       else:
-	       	await interaction.followup.send(f"Lỗi: {result['message']}")
-	except Exception as e:
-	       await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}")
+            }
+        elif result["status"] == 1:
+            await interaction.followup.send(f"Nạp thẻ thành công!",ephemeral=True)
+        else:
+            await interaction.followup.send(f"Lỗi: {result['message']}",ephemeral=True)
+    except Exception as e:
+        await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}",ephemeral=True)
 
 @tasks.loop(seconds=30)
 async def check_pending():
     for req_id, data in list(pending_requests.items()):
         check_data = {
-        "telco": data['telco'],
-        "code": data['code'],
-        "serial": data['serial'],
-        "amount": data['amount'],
-        "command": "check",
-        "sign": str(hashlib.sha256((key + data['code'] + data['serial']).encode()).hexdigest())
+            "telco": data['telco'],
+            "code": data['code'],
+            "serial": data['serial'],
+            "amount": data['amount'],
+            "command": "check",
+            "sign": str(hashlib.sha256((key + data['code'] + data['serial']).encode()).hexdigest())
         }
         try:
-            r = requests.get(api)
+            r = requests.get(api, data=check_data)
             r_json = r.json()
             status = r_json['status']
             message = r_json.get('message', 'Không có thông báo')
@@ -109,6 +110,9 @@ async def check_pending():
         except Exception as e:
             print(f"Error when checking request {req_id}: {e}")
 
+@check_pending.before_loop
+async def before_check_pending():
+    await bot.wait_until_ready()
 
 if __name__ == "__main__":
-	bot.run(token)
+    bot.run(token)
