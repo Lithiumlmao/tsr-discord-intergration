@@ -96,16 +96,17 @@ async def check_pending():
             
             if status != 99:
                 user = await bot.fetch_user(data['user_id'])
-                if status == 1:
-                    await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
-                elif status == 2:
-                    await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
-                elif status == 3:
-                    await user.send(f"Thẻ lỗi hoặc đã sử dụng. Thông báo: {message}")
-                elif status == 4:
-                    await user.send(f"Hệ thống bảo trì hoặc lỗi mạng. Thông báo: {message}")
-                else:
-                    await user.send(f"Nạp thẻ không thành công. Mã lỗi: {status}. Thông báo: {message}")
+                match status:
+                    case 1:
+                        await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
+                    case 2:
+                        await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
+                    case 3:
+                        await user.send(f"Thẻ lỗi hoặc đã sử dụng. Thông báo: {message}")
+                    case 4:
+                        await user.send(f"Hệ thống bảo trì hoặc lỗi mạng. Thông báo: {message}")
+                    case _:
+                        await user.send(f"Nạp thẻ không thành công. Mã lỗi: {status}. Thông báo: {message}")
                 del pending_requests[req_id]
         except Exception as e:
             print(f"Error when checking request {req_id}: {e}")
