@@ -24,7 +24,7 @@ api = "https://thesieure.com/chargingws/v2"
 id = os.getenv("TSR_PARTNER_ID")
 key = os.getenv("TSR_PARTNER_KEY")
 
-pending_requests = {}
+pending_requests = {}  # For live status update
 
 @bot.event
 async def on_ready():
