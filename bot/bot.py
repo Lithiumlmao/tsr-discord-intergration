@@ -42,7 +42,7 @@ async def on_ready():
     value="Mệnh giá thẻ (Ví dụ: 10000, 20000,...)"
 )
 async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vinaphone'], mathe: str, seri: str, value: Literal['10000', '20000', '30000', '50000', '100000', '200000', '300000', '500000']):
-    await interaction.response.defer()
+    #await interaction.response.defer()
     
     sign = str(hashlib.sha256((key + mathe + seri).encode()).hexdigest())
     
