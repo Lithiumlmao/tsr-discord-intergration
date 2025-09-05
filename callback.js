@@ -5,7 +5,7 @@ const app = express();
 const port = 6969;
 const PARTNER_KEY = process.env.PARTNER_KEY;
 
-app.use(express.json({ limit: '128kb' }));
+app.use(express.json({ limit: '16kb' }));
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
