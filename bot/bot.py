@@ -8,7 +8,6 @@ import requests
 import json
 import random
 from typing import Literal
-from ping3 import ping
 
 load_dotenv()
 
