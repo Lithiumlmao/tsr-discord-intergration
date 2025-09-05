@@ -36,7 +36,7 @@ async def on_ready():
         print(f"Unable to sync commands: {e}")
 
 @slash.command(name="ping", description="Lệnh dùng để kiểm tra độ trễ của bot")
-async def ping(interaction: discord.Interaction
+async def ping(interaction: discord.Interaction):
     await interaction.response.send_message(f"📶 | Độ trễ của bot là {round(bot.latency * 1000)}ms", ephemeral=True)
 
 @slash.command(name="napthe", description="Lệnh dùng để nạp thẻ cào điện thoại")
