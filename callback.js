@@ -1,10 +1,24 @@
 const express = require('express');
 const crypto = require('crypto');
+const helmet = require('helmet');
 const app = express();
 const port = 6969;
 const PARTNER_KEY = process.env.PARTNER_KEY;
 
 app.use(express.json({ limit: '128kb' }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", '*']
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: false,
+    preload: false
+  }
+}));
 app.enable('trust proxy');
 
 const REQUIRED_FIELDS = [
@@ -22,23 +36,17 @@ const REQUIRED_FIELDS = [
 ];
 const VALID_STATUSES = new Set(['1', '2', '3', '99']);
 
-const verifyCallbackSignature = body => {
-  try {
-    return crypto
-      .createHash('md5')
-      .update((PARTNER_KEY || '') + (body.code || '') + (body.serial || ''))
-      .digest('hex') === body.callback_sign;
-  } catch {
-    return false;
-  }
-};
+const verifyCallbackSignature = body => crypto
+  .createHash('md5')
+  .update(PARTNER_KEY + (body.code || '') + (body.serial || ''))
+  .digest('hex') === body.callback_sign;
 
 const validateRequest = body => {
   if (!body || typeof body !== 'object') return { status: 400, message: 'Invalid JSON payload' };
   const missingField = REQUIRED_FIELDS.find(field => body[field] === undefined || body[field] === null);
   if (missingField) return { status: 400, message: `Missing required field: ${missingField}` };
   if (!VALID_STATUSES.has(body.status)) return { status: 400, message: `Invalid status: must be one of ${[...VALID_STATUSES]}` };
-  if (!verifyCallbackSignature(body)) return { status: 401, message: 'Invalid callback signature' };
+  if (!PARTNER_KEY || !verifyCallbackSignature(body)) return { status: 401, message: 'Invalid callback signature' };
   return null;
 };
 
@@ -73,4 +81,4 @@ app.post('/callback', async (req, res, next) => {
 
 app.use((err, req, res) => res.status(500).json({ status: 'error', message: 'Internal server error' }));
 
-app.listen(port, () => {});
+app.listen(port, () => console.log(`Callback server running on port ${port}`));
