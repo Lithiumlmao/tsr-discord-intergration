@@ -20,7 +20,7 @@ bot = discord.Client(intents=intents)
 slash = app_commands.CommandTree(bot)
 
 api = "https://thesieure.com/chargingws/v2"
-callback = "https://lithshop.qzz.io/callback"
+callback = os.getenv('CALLBACK_URL')
 
 id = os.getenv('TSR_PARTNER_ID')
 key = os.getenv('TSR_PARTNER_KEY')
