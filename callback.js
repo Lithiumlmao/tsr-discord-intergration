@@ -1,17 +1,26 @@
 const express = require('express');
 const crypto = require('crypto');
+const helmet = require('helmet');
 const app = express();
 const port = 6969;
-
-
 const PARTNER_KEY = process.env.PARTNER_KEY;
 
-
-// Middleware
-app.use(express.json());
+app.use(express.json({ limit: '128kb' }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", '*']
+    }
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 app.enable('trust proxy');
 
-// Danh sách các trường bắt buộc và trạng thái hợp lệ
 const REQUIRED_FIELDS = [
   'callback_sign',
   'status',
@@ -23,101 +32,53 @@ const REQUIRED_FIELDS = [
   'amount',
   'code',
   'serial',
-  'telco',
+  'telco'
 ];
-const VALID_STATUSES = ['1', '2', '3', '99'];
+const VALID_STATUSES = new Set(['1', '2', '3', '99']);
 
-// Hàm kiểm tra chữ ký callback
-const verifyCallbackSignature = (body) => {
-  const calculatedSign = crypto
-    .createHash('md5')
-    .update(PARTNER_KEY + body.code + body.serial)
-    .digest('hex');
-  return calculatedSign === body.callback_sign;
+const verifyCallbackSignature = body => crypto
+  .createHash('md5')
+  .update(PARTNER_KEY + (body.code || '') + (body.serial || ''))
+  .digest('hex') === body.callback_sign;
+
+const validateRequest = body => {
+  if (!body || typeof body !== 'object') return { status: 400, message: 'Invalid JSON payload' };
+  const missingField = REQUIRED_FIELDS.find(field => body[field] === undefined || body[field] === null);
+  if (missingField) return { status: 400, message: `Missing required field: ${missingField}` };
+  if (!VALID_STATUSES.has(body.status)) return { status: 400, message: `Invalid status: must be one of ${[...VALID_STATUSES]}` };
+  if (!PARTNER_KEY || !verifyCallbackSignature(body)) return { status: 401, message: 'Invalid callback signature' };
+  return null;
 };
 
-// Hàm kiểm tra các trường bắt buộc
-const validateRequiredFields = (body) => {
-  const missingField = REQUIRED_FIELDS.find((field) => !body[field]);
-  return { isValid: !missingField, missingField };
-};
-
-// Hàm xử lý dữ liệu callback
-const processCallbackData = (body) => ({
+const processCallbackData = body => ({
   status: body.status,
   message: body.message,
   request_id: body.request_id,
   trans_id: body.trans_id,
-  declared_value: body.declared_value,
-  value: body.value,
-  amount: body.amount,
+  declared_value: Number(body.declared_value) || 0,
+  value: Number(body.value) || 0,
+  amount: Number(body.amount) || 0,
   code: body.code,
   serial: body.serial,
-  telco: body.telco,
+  telco: body.telco
 });
 
-// Endpoint callback
-app.post('/callback', (req, res, next) => {
+app.post('/callback', async (req, res, next) => {
   try {
-    const { body } = req;
+    const error = validateRequest(req.body);
+    if (error) return res.status(error.status).json({ status: 'error', message: error.message });
 
-    // Kiểm tra các trường bắt buộc
-    const { isValid, missingField } = validateRequiredFields(body);
-    if (!isValid) {
-      console.log(`Missing required field: ${missingField}`);
-      return res.status(400).json({
-        status: 'error',
-        message: `Missing required field: ${missingField}`,
-      });
-    }
-
-    // Kiểm tra trạng thái hợp lệ
-    if (!VALID_STATUSES.includes(body.status)) {
-      console.log(`Invalid status: ${body.status}`);
-      return res.status(400).json({
-        status: 'error',
-        message: `Invalid status: must be one of ${VALID_STATUSES}`,
-      });
-    }
-
-    // Xác minh chữ ký
-    if (!verifyCallbackSignature(body)) {
-      console.log('Invalid callback signature');
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid callback signature',
-      });
-    }
-
-    // Xử lý dữ liệu
-    const responseData = processCallbackData(body);
-
-    // Ghi log thông tin callback
-    console.log('Callback processed:', responseData);
-
-    // TODO: Lưu responseData vào database hoặc xử lý thêm (ví dụ: cập nhật số dư người dùng)
-
-    // Trả về phản hồi thành công
+    const responseData = processCallbackData(req.body);
     res.json({
       status: 'success',
       message: 'Callback processed',
-      data: responseData,
+      data: responseData
     });
   } catch (error) {
     next(error);
   }
 });
 
-// Middleware xử lý lỗi
-app.use((err, req, res, next) => {
-  console.error('Server error:', err.message);
-  res.status(500).json({
-    status: 'error',
-    message: 'Internal server error',
-  });
-});
+app.use((err, req, res) => res.status(500).json({ status: 'error', message: 'Internal server error' }));
 
-// Khởi động server
-app.listen(port, () => {
-  console.log(`Callback server running on port ${port}`);
-});
+app.listen(port, () => console.log(`Callback server running on port ${port}`));
