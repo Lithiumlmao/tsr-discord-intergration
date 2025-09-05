@@ -5,6 +5,8 @@ const app = express();
 const port = 6969;
 const PARTNER_KEY = process.env.PARTNER_KEY;
 
+
+
 app.use(express.json({ limit: '128kb' }));
 app.use(helmet({
   contentSecurityPolicy: {
@@ -15,8 +17,8 @@ app.use(helmet({
   },
   hsts: {
     maxAge: 31536000,
-    includeSubDomains: false,
-    preload: false
+    includeSubDomains: true,
+    preload: true
   }
 }));
 app.enable('trust proxy');
