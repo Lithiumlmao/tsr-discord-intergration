@@ -65,20 +65,13 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
         
         if result["status"] == 99:
             await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Bot sẽ thông báo kết quả qua DM khi hoàn tất.", ephemeral=True)
-            # Gọi hàm kiểm tra trạng thái
             await check_status(interaction, req_id, data)
         elif result["status"] == 1:
             await interaction.followup.send(f"Nạp thẻ thành công!", ephemeral=True)
-            user = await bot.fetch_user(interaction.user.id)
-            await user.send(f"Thẻ của bạn đã nạp thành công!")
         else:
             await interaction.followup.send(f"Lỗi: {result['message']}", ephemeral=True)
-            user = await bot.fetch_user(interaction.user.id)
-            await user.send(f"Nạp thẻ không thành công. Thông báo: {result['message']}")
     except Exception as e:
         await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}", ephemeral=True)
-        user = await bot.fetch_user(interaction.user.id)
-        await user.send(f"Đã có lỗi xảy ra khi gửi yêu cầu nạp thẻ: {str(e)}")
 
 async def check_status(interaction: discord.Interaction, req_id: str, data: dict):
     max_attempts = 10
@@ -109,19 +102,14 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
                 match status:
                     case 1:
                         await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
-                        await interaction.followup.send(f"Thẻ của bạn đã nạp thành công!", ephemeral=True)
                     case 2:
                         await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
-                        await interaction.followup.send(f"Thẻ sai mệnh giá. Thông báo: {message}", ephemeral=True)
                     case 3:
                         await user.send(f"Thẻ lỗi hoặc đã sử dụng. Thông báo: {message}")
-                        await interaction.followup.send(f"Thẻ lỗi hoặc đã sử dụng. Thông báo: {message}", ephemeral=True)
                     case 4:
                         await user.send(f"Hệ thống bảo trì hoặc lỗi mạng. Thông báo: {message}")
-                        await interaction.followup.send(f"Hệ thống bảo trì hoặc lỗi mạng. Thông báo: {message}", ephemeral=True)
                     case _:
                         await user.send(f"Nạp thẻ không thành công. Mã lỗi: {status}. Thông báo: {message}")
-                        await interaction.followup.send(f"Nạp thẻ không thành công. Mã lỗi: {status}", ephemeral=True)
                 return
             
             attempt += 1
