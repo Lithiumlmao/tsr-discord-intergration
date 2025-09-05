@@ -1,29 +1,25 @@
 import hashlib
 import discord
 from discord import app_commands
-from discord.ext import tasks
 from dotenv import load_dotenv
 import os
 import requests
 import json
 import random
 from typing import Literal
+import asyncio
 
 load_dotenv()
 
 token = os.getenv('TOKEN')
-
 intents = discord.Intents.default()
 intents.message_content = True
 bot = discord.Client(intents=intents)
 slash = app_commands.CommandTree(bot)
 
 api = "https://thesieure.com/chargingws/v2"
-
 id = os.getenv('TSR_PARTNER_ID')
 key = os.getenv('TSR_PARTNER_KEY')
-
-pending_requests = {}
 
 @bot.event
 async def on_ready():
@@ -31,7 +27,6 @@ async def on_ready():
     try:
         synced = await slash.sync()
         print(f"Synced {len(synced)} command(s).")
-        check_pending.start()
     except Exception as e:
         print(f"Unable to sync commands: {e}")
 
@@ -50,7 +45,6 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
     await interaction.response.defer(ephemeral=True)
     
     sign = str(hashlib.md5((key + mathe + seri).encode()).hexdigest())
-    
     req_id = str(interaction.user.id + interaction.created_at.timestamp() + random.randint(11111, 99999))
     
     data = {
@@ -64,44 +58,46 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
         "request_id": req_id,
         "command": "charging"
     }
+    
     try:
         response = requests.post(api, data=data)
         result = response.json()
+        
         if result["status"] == 99:
-            await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Sẽ gửi DM cập nhật trạng thái thẻ sau 15 giây.")
-            #await interaction.response.send_message("Thẻ của bạn đang được xử lý, Bot sẽ gửi DM khi hoàn thành....", ephemeral=True)
-            pending_requests[req_id] = {
-                'user_id': interaction.user.id,
-                'telco': data['telco'],
-                'code': data['code'],
-                'serial': data['serial'],
-                'sign': data['sign'],
-                'amount': data['amount']
-            }
+            await interaction.followup.send("Thẻ đã được gửi và đang chờ xử lý. Bot sẽ thông báo kết quả qua DM khi hoàn tất.", ephemeral=True)
+            # Gọi hàm kiểm tra trạng thái
+            await check_status(interaction, req_id, data)
         elif result["status"] == 1:
-            await interaction.followup.send(f"Nạp thẻ thành công!")
-            #await interaction.response.send_message("Thẻ của bạn đã được nạp thành công!", ephemeral=True)
+            await interaction.followup.send(f"Nạp thẻ thành công!", ephemeral=True)
+            user = await bot.fetch_user(interaction.user.id)
+            await user.send(f"Thẻ của bạn đã nạp thành công!")
         else:
-            await interaction.followup.send(f"Lỗi: {result['message']}")
-            #await interaction.response.send_message(f"Lỗi: {result['message']}", ephemeral=True)
+            await interaction.followup.send(f"Lỗi: {result['message']}", ephemeral=True)
+            user = await bot.fetch_user(interaction.user.id)
+            await user.send(f"Nạp thẻ không thành công. Thông báo: {result['message']}")
     except Exception as e:
-        await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}")
-        #await interaction.response.send_message(f"Đã có lỗi xảy ra: {str(e)}", ephemeral=True)
+        await interaction.followup.send(f"Đã có lỗi xảy ra: {str(e)}", ephemeral=True)
+        user = await bot.fetch_user(interaction.user.id)
+        await user.send(f"Đã có lỗi xảy ra khi gửi yêu cầu nạp thẻ: {str(e)}")
 
-@tasks.loop(seconds=15)
-async def check_pending():
-    for req_id, data in list(pending_requests.items()):
-        check_data = {
-            "partner_key": key,
-            "request_id": req_id,
-            "partner_id": id,
-            "telco": data['telco'],
-            "code": data['code'],
-            "serial": data['serial'],
-            "amount": data['amount'],
-            "command": "check",
-            "sign": str(hashlib.md5((key + data['code'] + data['serial']).encode()).hexdigest())
-        }
+async def check_status(interaction: discord.Interaction, req_id: str, data: dict):
+    max_attempts = 10
+    attempt = 0
+    check_interval = 2
+    
+    check_data = {
+        "partner_key": key,
+        "request_id": req_id,
+        "partner_id": id,
+        "telco": data['telco'],
+        "code": data['code'],
+        "serial": data['serial'],
+        "amount": data['amount'],
+        "command": "check",
+        "sign": str(hashlib.md5((key + data['code'] + data['serial']).encode()).hexdigest())
+    }
+    
+    while attempt < max_attempts:
         try:
             r = requests.post(api, data=check_data)
             r_json = r.json()
@@ -109,25 +105,38 @@ async def check_pending():
             message = r_json.get('message', 'Không có thông báo')
             
             if status != 99:
-                user = await bot.fetch_user(data['user_id'])
+                user = await bot.fetch_user(interaction.user.id)
                 match status:
                     case 1:
                         await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
+                        await interaction.followup.send(f"Thẻ của bạn đã nạp thành công!", ephemeral=True)
                     case 2:
                         await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
+                        await interaction.followup.send(f"Thẻ sai mệnh giá. Thông báo: {message}", ephemeral=True)
                     case 3:
                         await user.send(f"Thẻ lỗi hoặc đã sử dụng. Thông báo: {message}")
+                        await interaction.followup.send(f"Thẻ lỗi hoặc đã sử dụng. Thông báo: {message}", ephemeral=True)
                     case 4:
                         await user.send(f"Hệ thống bảo trì hoặc lỗi mạng. Thông báo: {message}")
+                        await interaction.followup.send(f"Hệ thống bảo trì hoặc lỗi mạng. Thông báo: {message}", ephemeral=True)
                     case _:
                         await user.send(f"Nạp thẻ không thành công. Mã lỗi: {status}. Thông báo: {message}")
-                del pending_requests[req_id]
+                        await interaction.followup.send(f"Nạp thẻ không thành công. Mã lỗi: {status}", ephemeral=True)
+                return
+            
+            attempt += 1
+            await asyncio.sleep(check_interval)
         except Exception as e:
             print(f"Error when checking request {req_id}: {e}")
+            user = await bot.fetch_user(interaction.user.id)
+            await user.send(f"Đã có lỗi xảy ra khi kiểm tra trạng thái thẻ: {str(e)}")
+            await interaction.followup.send(f"Đã có lỗi xảy ra khi kiểm tra trạng thái: {str(e)}", ephemeral=True)
+            return
+        
 
-@check_pending.before_loop
-async def before_check_pending():
-    await bot.wait_until_ready()
+    user = await bot.fetch_user(interaction.user.id)
+    await user.send(f"Không thể kiểm tra trạng thái thẻ của bạn (request_id: {req_id}). Vui lòng liên hệ hỗ trợ.")
+    await interaction.followup.send(f"Không thể kiểm tra trạng thái thẻ sau {max_attempts} lần thử. Vui lòng thử lại sau.", ephemeral=True)
 
 if __name__ == "__main__":
     bot.run(token)
