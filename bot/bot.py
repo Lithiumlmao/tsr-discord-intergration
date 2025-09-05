@@ -31,7 +31,6 @@ async def on_ready():
     try:
         synced = await slash.sync()
         print(f"Synced {len(synced)} command(s).")
-        check_pending.start()
     except Exception as e:
         print(f"Unable to sync commands: {e}")
 
@@ -73,6 +72,7 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
                 'serial': data['serial'],
                 'amount': data['amount']
             }
+            check_pending.start()
         elif result["status"] == 1:
             await interaction.followup.send(f"Nạp thẻ thành công!")
             #await interaction.response.send_message("Thẻ của bạn đã được nạp thành công!", ephemeral=True)
@@ -114,6 +114,7 @@ async def check_pending():
                     case _:
                         await user.send(f"Nạp thẻ không thành công. Mã lỗi: {status}. Thông báo: {message}")
                 del pending_requests[req_id]
+                check_pending.stop()
         except Exception as e:
             print(f"Error when checking request {req_id}: {e}")
 
