@@ -8,7 +8,6 @@ import json
 import random
 from typing import Literal
 import asyncio
-import sqlite3
 
 load_dotenv()
 
