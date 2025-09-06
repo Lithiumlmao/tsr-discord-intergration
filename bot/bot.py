@@ -121,7 +121,7 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
             await check_status(interaction, req_id, data)
         elif result["status"] == 1:
             await interaction.followup.send(f"Nạp thẻ thành công!", ephemeral=True)
-            add_balance(interaction.user.id, int(value))
+            add_balance(interaction.user.id, int(value * 80%))
             increment_transactions(interaction.user.id)
         else:
             await interaction.followup.send(f"Lỗi: {result['message']}", ephemeral=True)
@@ -159,7 +159,7 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
                 match status:
                     case 1:
                         await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
-                        add_balance(interaction.user.id, int(data['amount']))
+                        add_balance(interaction.user.id, int(data['amount'] * 80%))
                         increment_transactions(interaction.user.id)
                     case 2:
                         await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
