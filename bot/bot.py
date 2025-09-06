@@ -9,6 +9,7 @@ import random
 from typing import Literal
 import asyncio
 import sqlite3
+import redis
 
 
 load_dotenv()
@@ -94,9 +95,10 @@ async def ping(interaction: discord.Interaction):
     value="Mệnh giá thẻ (Ví dụ: 10000, 20000,...)"
 )
 async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vinaphone'], mathe: str, seri: str, value: Literal['10000', '20000', '30000', '50000', '100000', '200000', '300000', '500000']):
-    await interaction.response.defer(ephemeral=True)
+    """ await interaction.response.defer(ephemeral=True)
     if not if_user_exists(interaction.user.id):
         create_user(interaction.user.name, interaction.user.id)
+    """
     sign = str(hashlib.md5((key + mathe + seri).encode()).hexdigest())
     req_id = str(interaction.user.id + interaction.created_at.timestamp() + random.randint(11111, 99999))
     
@@ -121,8 +123,8 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
             await check_status(interaction, req_id, data)
         elif result["status"] == 1:
             await interaction.followup.send(f"Nạp thẻ thành công!", ephemeral=True)
-            add_balance(interaction.user.id, int(value))
-            increment_transactions(interaction.user.id)
+            #add_balance(interaction.user.id, int(value))
+            #increment_transactions(interaction.user.id)
         else:
             await interaction.followup.send(f"Lỗi: {result['message']}", ephemeral=True)
     except Exception as e:
@@ -157,8 +159,8 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
                 match status:
                     case 1:
                         await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
-                        add_balance(interaction.user.id, int(data['amount']))
-                        increment_transactions(interaction.user.id)
+                        #add_balance(interaction.user.id, int(data['amount']))
+                        #increment_transactions(interaction.user.id)
                     case 2:
                         await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
                     case 3:
@@ -183,7 +185,7 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
     await user.send(f"Không thể kiểm tra trạng thái thẻ của bạn (request_id: {req_id}). Vui lòng liên hệ hỗ trợ.")
     await interaction.followup.send(f"Không thể kiểm tra trạng thái thẻ sau {max_attempts} lần thử. Vui lòng thử lại sau.", ephemeral=True)
 
-@slash.command(name="balance", description="Xem số dư tài khoản của bạn")
+"""@slash.command(name="balance", description="Xem số dư tài khoản của bạn")
 async def balance(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     if not if_user_exists(interaction.user.id):
@@ -194,6 +196,6 @@ async def balance(interaction: discord.Interaction):
     embbed.add_field(name="Số dư hiện tại: ", value=f"{user[3]} VND", inline=False)
     embbed.add_field(name="Tổng số lần giao dịch: ", value=user[4], inline=False)
     await interaction.followup.send(embed=embbed, ephemeral=True)
-
+"""
 if __name__ == "__main__":
     bot.run(token)
