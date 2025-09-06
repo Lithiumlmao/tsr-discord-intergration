@@ -134,6 +134,8 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
     attempt = 0
     check_interval = 2
     
+    user = await bot.fetch_user(interaction.user.id)
+    
     check_data = {
         "partner_key": key,
         "request_id": req_id,
@@ -148,10 +150,10 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
     
     while attempt < max_attempts:
         try:
-            r = requests.post(api, data=check_data)
-            r_json = r.json()
-            status = r_json['status']
-            message = r_json.get('message', 'Không có thông báo')
+            response = requests.post(api, data=check_data)
+            result = response.json()
+            status = result['status']
+            message = result.get('message', 'Không có thông báo')
             
             if status != 99:
                 user = await bot.fetch_user(interaction.user.id)
@@ -174,7 +176,6 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
             await asyncio.sleep(check_interval)
         except Exception as e:
             print(f"Error when checking request {req_id}: {e}")
-            user = await bot.fetch_user(interaction.user.id)
             await user.send(f"Đã có lỗi xảy ra khi kiểm tra trạng thái thẻ: {str(e)}")
             await interaction.followup.send(f"Đã có lỗi xảy ra khi kiểm tra trạng thái: {str(e)}", ephemeral=True)
             return
