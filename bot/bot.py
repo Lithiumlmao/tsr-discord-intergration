@@ -14,56 +14,60 @@ import redis
 
 load_dotenv()
 
-#db shi
-db_connection = sqlite3.connect('C:/Users/ADMIN/Desktop/bot_nap/tsr-discord-intergration/bot/database.db')
-db_cursor = db_connection.cursor()
+redis_pass = os.getenv('REDIS_PASS')
+redis_host = os.getenv('REDIST_HOST')
 
-db_cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+redis = redis.Redis(
+    host= redis_host,
+    port=18699,
+    decode_responses=True,
+    username="default",
+    password=redis_pass,
+)
+
+#db shi
+#db_connection = sqlite3.connect('C:/Users/ADMIN/Desktop/bot_nap/tsr-discord-intergration/bot/database.db')
+#db_cursor = db_connection.cursor()
+
+"""db_cursor.execute('''CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL UNIQUE,
     username TEXT NOT NULL,
     balance INTEGER DEFAULT 0,
     transactions INTEGER DEFAULT 0,
     is_admin INTEGER DEFAULT 0
-)''')
-db_connection.commit()
+)''')"""
+#db_connection.commit()
 
 def create_user(username, user_id, balance=0, transactions=0):
-    db_cursor.execute(
-        '''
-        INSERT INTO users (user_id, username, balance, transactions)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET
-            username=excluded.username,
-            balance=excluded.balance,
-            transactions=excluded.transactions
-        ''',
-        (user_id, username, balance, transactions)
-    )
-    db_connection.commit()
+    redis.hset('users', user_id, json.dumps({'username': username, 'balance': balance, 'transactions': transactions, 'is_admin': 0}))
 
 def if_user_exists(user_id):
-    db_cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
-    return db_cursor.fetchone() is not None
+    return redis.hexists('users', user_id)
 
 def get_user(user_id):
-    db_cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
-    return db_cursor.fetchone()
+    return json.loads(redis.hget('users', user_id))
 
 def give_admin(user_id):
-    db_cursor.execute('UPDATE users SET is_admin = 1 WHERE user_id = ?', (user_id,))
-    db_connection.commit()
+    if json.loads(redis.hget('users', user_id))['is_admin'] == 0:
+        redis.hincrby('users', user_id, 'is_admin', 1)
+        return 0
+    else:
+        return 1
 
 def remove_admin(user_id):
-    db_cursor.execute('UPDATE users SET is_admin = 0 WHERE user_id = ?', (user_id,))
-    db_connection.commit()
+    if json.loads(redis.hget('users', user_id))['is_admin'] == 1:
+        redis.hincrby('users', user_id, 'is_admin', -1)
+        return 0
+    else:
+        return 1
 
 def add_balance(user_id, amount):
-    db_cursor.execute('UPDATE users SET balance = balance + ? WHERE user_id = ?', (amount, user_id))
-    db_connection.commit()
+    redis.hincrby('users', user_id, 'balance', amount)
+
 def increment_transactions(user_id):
-    db_cursor.execute('UPDATE users SET transactions = transactions + 1 WHERE user_id = ?', (user_id,))
-    db_connection.commit()
+    redis.hincrby('users', user_id, 'transactions', 1)
+
 token = os.getenv('TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True
