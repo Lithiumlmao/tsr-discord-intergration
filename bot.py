@@ -12,57 +12,6 @@ import sqlite3
 
 load_dotenv()
 
-#db shi
-db_connection = sqlite3.connect('C:/Users/ADMIN/Desktop/bot_nap/tsr-discord-intergration/bot/database.db')
-db_cursor = db_connection.cursor()
-
-db_cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL UNIQUE,
-    username TEXT NOT NULL,
-    balance INTEGER DEFAULT 0,
-    transactions INTEGER DEFAULT 0,
-    is_admin INTEGER DEFAULT 0
-)''')
-db_connection.commit()
-
-def create_user(username, user_id, balance=0, transactions=0):
-    db_cursor.execute(
-        '''
-        INSERT INTO users (user_id, username, balance, transactions)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(user_id) DO UPDATE SET
-            username=excluded.username,
-            balance=excluded.balance,
-            transactions=excluded.transactions
-        ''',
-        (user_id, username, balance, transactions)
-    )
-    db_connection.commit()
-
-def if_user_exists(user_id):
-    db_cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
-    return db_cursor.fetchone() is not None
-
-def get_user(user_id):
-    db_cursor.execute('SELECT * FROM users WHERE user_id = ?', (user_id,))
-    return db_cursor.fetchone()
-
-def give_admin(user_id):
-    db_cursor.execute('UPDATE users SET is_admin = 1 WHERE user_id = ?', (user_id,))
-    db_connection.commit()
-
-def remove_admin(user_id):
-    db_cursor.execute('UPDATE users SET is_admin = 0 WHERE user_id = ?', (user_id,))
-    db_connection.commit()
-
-def add_balance(user_id, amount):
-    db_cursor.execute('UPDATE users SET balance = balance + ? WHERE user_id = ?', (amount, user_id))
-    db_connection.commit()
-def increment_transactions(user_id):
-    db_cursor.execute('UPDATE users SET transactions = transactions + 1 WHERE user_id = ?', (user_id,))
-    db_connection.commit()
-
 token = os.getenv('TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True
@@ -121,8 +70,6 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
             await check_status(interaction, req_id, data)
         elif result["status"] == 1:
             await interaction.followup.send(f"Nạp thẻ thành công!", ephemeral=True)
-            add_balance(interaction.user.id, int(value * 80%))
-            increment_transactions(interaction.user.id)
         else:
             await interaction.followup.send(f"Lỗi: {result['message']}", ephemeral=True)
     except Exception as e:
@@ -159,8 +106,6 @@ async def check_status(interaction: discord.Interaction, req_id: str, data: dict
                 match status:
                     case 1:
                         await user.send(f"Thẻ của bạn đã nạp thành công! Thông báo: {message}")
-                        add_balance(interaction.user.id, int(data['amount'] * 80%))
-                        increment_transactions(interaction.user.id)
                     case 2:
                         await user.send(f"Thẻ sai mệnh giá. Thông báo: {message}")
                     case 3:
