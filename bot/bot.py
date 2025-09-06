@@ -63,6 +63,7 @@ def add_balance(user_id, amount):
 def increment_transactions(user_id):
     db_cursor.execute('UPDATE users SET transactions = transactions + 1 WHERE user_id = ?', (user_id,))
     db_connection.commit()
+
 token = os.getenv('TOKEN')
 intents = discord.Intents.default()
 intents.message_content = True
