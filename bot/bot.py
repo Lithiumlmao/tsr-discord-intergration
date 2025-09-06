@@ -10,7 +10,6 @@ from typing import Literal
 import asyncio
 import sqlite3
 
-
 load_dotenv()
 
 #db shi
@@ -99,7 +98,7 @@ async def napthe(interaction: discord.Interaction, type: Literal['Viettel', 'Vin
     if not if_user_exists(interaction.user.id):
         create_user(interaction.user.name, interaction.user.id)
     sign = str(hashlib.md5((key + mathe + seri).encode()).hexdigest())
-    req_id = str(interaction.user.id + interaction.created_at.timestamp() + random.randint(11111, 99999))
+    req_id = str(interaction.user.id + interaction.created_at.timestamp() + random.randint(111111, 999999))
     
     data = {
         "sign": sign,
